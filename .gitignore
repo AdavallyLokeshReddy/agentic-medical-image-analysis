@@ -1,0 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build / distribution
+build/
+dist/
+*.egg-info/
+
+# Medical / dataset files
+data/
+datasets/
+*.dcm
+*.nii
+*.nii.gz
+
+# Model weights / large artifacts
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.bin
+
+# Generated outputs
+outputs/
+results/
+runs/
+artifacts/
+
+# Temporary files
+tmp/
+temp/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+
+# Uploaded medical images / case files
+uploads/
