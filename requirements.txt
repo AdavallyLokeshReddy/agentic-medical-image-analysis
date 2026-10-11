@@ -1,0 +1,28 @@
+# Runtime dependencies for the backend.
+# Tested with Python 3.13. Python 3.10 or newer is required (the code uses `X | Y` type hints).
+#
+# On a machine without a GPU, install the CPU build of PyTorch first to avoid a multi-GB download:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+numpy>=1.26
+torch>=2.2
+monai>=1.3
+pydicom>=2.4
+nibabel>=5.2
+pillow>=10.0
+opencv-python-headless>=4.8
+safetensors>=0.4
+huggingface_hub>=0.20
+
+# API
+fastapi>=0.110
+uvicorn>=0.27
+python-multipart>=0.0.9
+pydantic>=2.5
+
+# Database (PostgreSQL)
+SQLAlchemy>=2.0
+psycopg[binary]>=3.1
+
+# NOT listed here: `skp`. The head CT hemorrhage tool (backend/model_runtime/inference.py)
+# imports it from an external research code base. See "Optional: head CT hemorrhage model" in README.md.

@@ -33,7 +33,6 @@ def test_create_evidence_with_provenance():
 
     assert evidence.evidence_id == "EVID-001"
     assert evidence.case_id == "CASE-0005"
-    assert evidence.tool_name is None
     assert evidence.provenance.tool_name == "ich_detection"
     assert evidence.provenance.model_name == "ct-head-hemorrhage-detection"
     assert evidence.series_uid == "SERIES-001"

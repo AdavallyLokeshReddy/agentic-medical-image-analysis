@@ -1,5 +1,8 @@
 # Agentic AI for Autonomous Medical Image Analysis & Clinical Workflow Automation
 
+[![Tests](https://github.com/AdavallyLokeshReddy/agentic-medical-image-analysis/actions/workflows/tests.yml/badge.svg)](https://github.com/AdavallyLokeshReddy/agentic-medical-image-analysis/actions/workflows/tests.yml)
+
+
 
 
 > A governed agentic AI architecture for coordinating medical image analysis workflows with verification, uncertainty handling, human oversight, structured reporting, and auditability.
@@ -1072,17 +1075,52 @@ source .venv/bin/activate
 
 
 
-Install the dependencies required by the current development environment and run:
-
-
+Install the dependencies (Python 3.10 or newer; tested with 3.13):
 
 ```bash
-
-pytest
-
+pip install -r requirements-dev.txt
 ```
 
+On a machine without a GPU, install the CPU build of PyTorch first to avoid a very large download:
 
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+```
+
+Run the tests from the repository root:
+
+```bash
+python -m pytest
+```
+
+### What a fresh clone can and cannot run
+
+Tests that need things this repository intentionally does not contain are **skipped with a stated reason** instead of failing:
+
+| Needs | Where it comes from | Without it |
+| --- | --- | --- |
+| PostgreSQL | a local server, set through `DATABASE_URL` (see `.env.example`) | database tests are skipped |
+| Model weights (`model.pt`) | MONAI model zoo bundles, kept outside the repo | model-loading and inference tests are skipped |
+| Test CT series (`backend/uploads/CASE-LUNG-0001/series`) | local imaging data, kept outside the repo | the CT integration test is skipped |
+| `skp` package | external research code base for the head CT hemorrhage model | the tests that import it are not collected |
+
+`pytest` prints the reason for every skip. The `backend/tests/mri1_*_test.py` files are data-dependent scripts (they need BraTS MRI volumes), not pytest tests, so they are not collected.
+
+### Database tests
+
+The database tests use fixed IDs and do not clean up after themselves. To make repeated runs reliable, the test session drops and recreates all tables **only** when the database name ends in `_test` (or when `ALLOW_TEST_DB_RESET=1` is set). Use a dedicated test database and never point `DATABASE_URL` at data you care about:
+
+```bash
+createdb agentic_medical_ai_test
+export DATABASE_URL=postgresql+psycopg://postgres:YOUR_PASSWORD@localhost:5432/agentic_medical_ai_test
+python -m pytest
+```
+
+The GitHub Actions workflow in `.github/workflows/tests.yml` runs the suite on every push and pull request against a PostgreSQL service.
+
+### Optional: head CT hemorrhage model
+
+`backend/model_runtime/inference.py` imports the external `skp` code base and its trained weights, which are not part of this repository. Without them the head CT hemorrhage tool cannot be loaded, and the end-to-end head CT workflow cannot be run from a fresh clone.
 
 Large model weights, medical datasets, and local uploaded case files are intentionally kept outside the repository.
 
