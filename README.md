@@ -3,6 +3,9 @@
 [![Tests](https://github.com/AdavallyLokeshReddy/agentic-medical-image-analysis/actions/workflows/tests.yml/badge.svg)](https://github.com/AdavallyLokeshReddy/agentic-medical-image-analysis/actions/workflows/tests.yml)
 
 
+**Research basis:** this prototype implements parts of the design in an accepted conference paper (ICCSAI 2026). See [docs/RESEARCH_BASIS.md](docs/RESEARCH_BASIS.md) for what is implemented, partial and not implemented.
+
+
 
 
 > A governed agentic AI architecture for coordinating medical image analysis workflows with verification, uncertainty handling, human oversight, structured reporting, and auditability.
