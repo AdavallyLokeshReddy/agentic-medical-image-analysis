@@ -1,0 +1,14 @@
+# Minimal runtime for DEPLOYING THE HTTP API (cases, upload, series, preview, governance).
+# Deliberately excludes torch / monai / skp: no HTTP route runs a model, and the governance
+# router builds its tool metadata without them. Install requirements.txt instead for the
+# full research environment.
+numpy>=1.26
+pydicom>=2.4
+pillow>=10.0
+fastapi>=0.110
+uvicorn>=0.27
+python-multipart>=0.0.9
+pydantic>=2.5
+# Only needed if DATABASE_URL is set (audit read):
+SQLAlchemy>=2.0
+psycopg[binary]>=3.1

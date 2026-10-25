@@ -1,0 +1,283 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   Design tokens — "clinical command center meets scientific instrument"
+   Dark, precise, restrained. Color carries MEANING, never decoration:
+     accent  = live / interactive      live   = backed by real backend data
+     warn    = review / caution        danger = error / failure
+     model   = model runtime layer     dim    = not exposed / unavailable
+------------------------------------------------------------------- */
+:root {
+  --bg: #060a11;
+  --bg-2: #0a1019;
+  --panel: rgba(15, 22, 34, 0.72);
+  --panel-solid: #0d1420;
+  --panel-2: #121b2a;
+  --line: rgba(148, 170, 200, 0.14);
+  --line-strong: rgba(148, 170, 200, 0.28);
+
+  --ink: #e6edf7;
+  --ink-dim: #a3b3ca;
+  --ink-faint: #8394ad;
+
+  --accent: #5ad1e6;
+  --accent-soft: rgba(90, 209, 230, 0.14);
+  --live: #4ade9f;
+  --live-soft: rgba(74, 222, 159, 0.14);
+  --warn: #f5b94a;
+  --warn-soft: rgba(245, 185, 74, 0.14);
+  --danger: #ff7a7a;
+  --danger-soft: rgba(255, 122, 122, 0.14);
+  --model: #a595ff;
+  --model-soft: rgba(165, 149, 255, 0.14);
+
+  --radius: 12px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg2: var(--bg-2);
+  --color-panel: var(--panel);
+  --color-solid: var(--panel-solid);
+  --color-panel2: var(--panel-2);
+  --color-line: var(--line);
+  --color-line2: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-dim: var(--ink-dim);
+  --color-faint: var(--ink-faint);
+  --color-accent: var(--accent);
+  --color-live: var(--live);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-model: var(--model);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background:
+    radial-gradient(1200px 520px at 78% -8%, rgba(90, 209, 230, 0.07), transparent 60%),
+    radial-gradient(900px 480px at -5% 12%, rgba(165, 149, 255, 0.06), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(90, 209, 230, 0.3);
+}
+
+/* Keyboard focus: always visible, never removed. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Thin, unobtrusive scrollbars for dense panels. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+@layer components {
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    backdrop-filter: blur(14px) saturate(120%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.04) inset,
+      0 18px 40px -24px rgba(0, 0, 0, 0.7);
+  }
+
+  .panel-title {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.25rem;
+    padding: 0 0.9rem;
+    border-radius: 9px;
+    border: 1px solid var(--line-strong);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--ink);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    transition:
+      background 0.18s var(--ease),
+      border-color 0.18s var(--ease),
+      transform 0.18s var(--ease);
+  }
+  .btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(148, 170, 200, 0.45);
+  }
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .btn-primary {
+    background: linear-gradient(180deg, rgba(90, 209, 230, 0.22), rgba(90, 209, 230, 0.1));
+    border-color: rgba(90, 209, 230, 0.55);
+    color: #d9f6fb;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: linear-gradient(180deg, rgba(90, 209, 230, 0.32), rgba(90, 209, 230, 0.16));
+    border-color: rgba(90, 209, 230, 0.8);
+  }
+  .btn-icon {
+    min-height: 2rem;
+    min-width: 2rem;
+    padding: 0;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Motion — communicates system state. Fully disabled for users who
+   request reduced motion (see media query below).
+------------------------------------------------------------------- */
+@keyframes stage-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(90, 209, 230, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(90, 209, 230, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(90, 209, 230, 0);
+  }
+}
+
+@keyframes flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes draw-check {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes scan {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.anim-rise {
+  animation: rise 0.45s var(--ease) both;
+}
+.anim-pulse {
+  animation: stage-pulse 1.8s ease-out infinite;
+}
+.anim-flow {
+  stroke-dasharray: 5 7;
+  animation: flow 0.9s linear infinite;
+}
+.anim-check {
+  stroke-dasharray: 24;
+  animation: draw-check 0.5s var(--ease) both;
+}
+.anim-scan {
+  animation: scan 1.4s linear infinite;
+}
+.anim-blink {
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print: the report page is designed to be printed / saved as PDF. */
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-sheet {
+    background: #fff !important;
+    color: #111 !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+  .print-sheet * {
+    color: #111 !important;
+    border-color: #ccc !important;
+  }
+}

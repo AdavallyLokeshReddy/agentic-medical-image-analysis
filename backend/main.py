@@ -8,6 +8,7 @@ from typing import Optional
 import numpy as np
 import pydicom
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -22,6 +23,41 @@ app = FastAPI(
     title="Agentic Medical AI Backend",
     description="Backend foundation for Agentic AI Medical Image Analysis",
     version="0.5.0",
+)
+
+
+# ============================================================
+# CORS (environment-driven)
+#
+# CORS_ORIGINS is a comma-separated list of allowed browser
+# origins, e.g.
+#     CORS_ORIGINS=https://my-frontend.example.com,http://localhost:3000
+#
+# Defaults to the local Next.js dev server only. Never "*" by
+# default. The /preview response carries its slice metadata in
+# custom headers, so they must be exposed to the browser.
+# ============================================================
+
+_cors_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000",
+    ).split(",")
+    if origin.strip()
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=[
+        "X-Case-ID",
+        "X-Series-Instance-UID",
+        "X-Slice-Index",
+        "X-Slice-Count",
+    ],
 )
 
 
@@ -356,6 +392,28 @@ def get_case_metadata(case_id: str):
         "case_id": case_id,
         "status": "existing"
     }
+
+
+# ============================================================
+# READ-ONLY EXTENSIONS (case list + governance introspection)
+#
+# See governance_api.py. These routes never execute a model and
+# never write; they expose what the governance libraries can
+# truthfully report.
+# ============================================================
+
+from governance_api import ApiContext, build_routers  # noqa: E402
+
+for _router in build_routers(
+    ApiContext(
+        cases=cases,
+        upload_dir=UPLOAD_DIR,
+        validate_case_id=validate_case_id,
+        select_series=select_series,
+        get_dicom_files=get_dicom_files,
+    )
+):
+    app.include_router(_router)
 
 
 # ============================================================
