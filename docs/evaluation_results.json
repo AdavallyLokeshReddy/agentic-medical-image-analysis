@@ -1,0 +1,258 @@
+{
+  "generated_at": "2026-10-25T17:32:56+0000",
+  "api": "http://localhost:8000",
+  "data": "synthetic phantoms only (no patient data, no pathology)",
+  "health": {
+    "status": "healthy",
+    "version": "0.5.0"
+  },
+  "turnaround": {
+    "24 slices x 128x128": {
+      "runs": 10,
+      "stages": {
+        "upload": {
+          "median_ms": 17.6,
+          "p95_ms": 22.9,
+          "min_ms": 14.3,
+          "max_ms": 22.9
+        },
+        "series": {
+          "median_ms": 3.0,
+          "p95_ms": 6.7,
+          "min_ms": 2.6,
+          "max_ms": 6.7
+        },
+        "series_info": {
+          "median_ms": 22.2,
+          "p95_ms": 47.7,
+          "min_ms": 18.4,
+          "max_ms": 47.7
+        },
+        "ct_data": {
+          "median_ms": 20.1,
+          "p95_ms": 22.0,
+          "min_ms": 18.8,
+          "max_ms": 22.0
+        },
+        "preview": {
+          "median_ms": 24.0,
+          "p95_ms": 46.2,
+          "min_ms": 22.0,
+          "max_ms": 46.2
+        },
+        "plan": {
+          "median_ms": 3.9,
+          "p95_ms": 34.6,
+          "min_ms": 3.5,
+          "max_ms": 34.6
+        }
+      },
+      "total": {
+        "median_ms": 93.7,
+        "p95_ms": 176.6,
+        "min_ms": 83.6,
+        "max_ms": 176.6
+      }
+    },
+    "40 slices x 512x512": {
+      "runs": 10,
+      "stages": {
+        "upload": {
+          "median_ms": 66.6,
+          "p95_ms": 108.4,
+          "min_ms": 51.7,
+          "max_ms": 108.4
+        },
+        "series": {
+          "median_ms": 3.3,
+          "p95_ms": 4.0,
+          "min_ms": 2.4,
+          "max_ms": 4.0
+        },
+        "series_info": {
+          "median_ms": 119.0,
+          "p95_ms": 134.1,
+          "min_ms": 107.4,
+          "max_ms": 134.1
+        },
+        "ct_data": {
+          "median_ms": 115.2,
+          "p95_ms": 135.4,
+          "min_ms": 100.2,
+          "max_ms": 135.4
+        },
+        "preview": {
+          "median_ms": 142.7,
+          "p95_ms": 166.8,
+          "min_ms": 125.3,
+          "max_ms": 166.8
+        },
+        "plan": {
+          "median_ms": 5.0,
+          "p95_ms": 5.9,
+          "min_ms": 3.8,
+          "max_ms": 5.9
+        }
+      },
+      "total": {
+        "median_ms": 472.7,
+        "p95_ms": 526.1,
+        "min_ms": 416.4,
+        "max_ms": 526.1
+      }
+    }
+  },
+  "validation_gate": {
+    "malformed_total": 10,
+    "malformed_flagged": 8,
+    "missed": 2,
+    "valid_total": 3,
+    "valid_wrongly_flagged": 0,
+    "gate_sensitivity": 0.8,
+    "gate_specificity": 1.0,
+    "malformed": {
+      "MR modality (unsupported)": {
+        "flagged": true,
+        "detail": "upload rejected: HTTP 400"
+      },
+      "Non-CT modality: US": {
+        "flagged": true,
+        "detail": "upload rejected: HTTP 400"
+      },
+      "Mixed series UIDs in one upload": {
+        "flagged": true,
+        "detail": "upload rejected: HTTP 400"
+      },
+      "Inconsistent matrix size across slices": {
+        "flagged": true,
+        "detail": "series_status=invalid (CT slices have inconsistent image dimensions)"
+      },
+      "Missing ImagePositionPatient": {
+        "flagged": false,
+        "detail": "series_status=valid"
+      },
+      "Mixed study UIDs": {
+        "flagged": true,
+        "detail": "upload rejected: HTTP 400"
+      },
+      "Single slice only": {
+        "flagged": false,
+        "detail": "series_status=valid"
+      },
+      "Non-DICOM bytes named .dcm": {
+        "flagged": true,
+        "detail": "upload rejected: HTTP 400"
+      },
+      "Zero-length file": {
+        "flagged": true,
+        "detail": "upload rejected: HTTP 400"
+      },
+      "Truncated DICOM": {
+        "flagged": true,
+        "detail": "series_status=invalid (The number of bytes of pixel data is less than expected (10149 vs 32768 bytes) - the dataset may be corrupted, have an invalid group 0028 element value, or the transfer syntax may be incorrect)"
+      }
+    },
+    "valid": {
+      "valid phantom #1": {
+        "flagged": false,
+        "detail": "series_status=valid"
+      },
+      "valid phantom #2": {
+        "flagged": false,
+        "detail": "series_status=valid"
+      },
+      "valid phantom #3": {
+        "flagged": false,
+        "detail": "series_status=valid"
+      }
+    }
+  },
+  "determinism": {
+    "runs": 10,
+    "distinct_plans": 1,
+    "identical": true
+  },
+  "security": {
+    "path_probes_total": 8,
+    "path_probes_safe": 8,
+    "probes": {
+      "../etc/passwd": {
+        "statuses": [
+          404,
+          404,
+          404,
+          404
+        ],
+        "safe": true
+      },
+      "..%2f..%2fetc%2fpasswd": {
+        "statuses": [
+          404,
+          404,
+          404,
+          404
+        ],
+        "safe": true
+      },
+      "CASE-1;rm -rf": {
+        "statuses": [
+          400,
+          400,
+          400,
+          400
+        ],
+        "safe": true
+      },
+      "CASE 0001": {
+        "statuses": [
+          400,
+          400,
+          400,
+          400
+        ],
+        "safe": true
+      },
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {
+        "statuses": [
+          404,
+          404,
+          404,
+          404
+        ],
+        "safe": true
+      },
+      "%00": {
+        "statuses": [
+          400,
+          400,
+          400,
+          400
+        ],
+        "safe": true
+      },
+      "CASE-0001/../../x": {
+        "statuses": [
+          404,
+          404,
+          404,
+          404
+        ],
+        "safe": true
+      },
+      "<script>alert(1)</script>": {
+        "statuses": [
+          404,
+          404,
+          404,
+          404
+        ],
+        "safe": true
+      }
+    },
+    "cors_allowed_origin_header": {
+      "http://localhost:3000": "http://localhost:3000",
+      "https://evil.example.com": null
+    },
+    "cors_rejects_unlisted_origin": true
+  }
+}
