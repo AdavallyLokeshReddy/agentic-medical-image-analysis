@@ -1,0 +1,92 @@
+name: Runtime image
+
+# Builds the full runtime image (API + governance + torch + MONAI + skp) and checks that it starts.
+# Manual or on pull requests that touch the runtime. It never pushes the image anywhere.
+#
+# Required repository variable:  SKP_SOURCE  (public pip source of the external skp package)
+
+on:
+  workflow_dispatch:
+    inputs:
+      prefetch_weights:
+        description: "Bake the ICH weights into the image and run the model smoke test (slower)"
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - docker/**
+      - requirements*.txt
+      - backend/**
+      - scripts/**
+      - .github/workflows/docker.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PREFETCH: ${{ inputs.prefetch_weights && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require SKP_SOURCE
+        run: |
+          if [ -z "${{ vars.SKP_SOURCE }}" ]; then
+            echo "Set the repository variable SKP_SOURCE (Settings > Secrets and variables > Actions > Variables)." >&2
+            exit 1
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image (fails if any required package is missing)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          push: false
+          tags: agentic-medical-runtime:ci
+          build-args: |
+            SKP_SOURCE=${{ vars.SKP_SOURCE }}
+            PREFETCH_WEIGHTS=${{ env.PREFETCH }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start the container and check the API
+        run: |
+          docker run -d --name rt -p 8080:8080 -e CORS_ORIGINS=http://localhost:3000 agentic-medical-runtime:ci
+          for i in $(seq 1 40); do
+            curl -fsS http://127.0.0.1:8080/health && break
+            sleep 3
+          done
+          curl -fsS http://127.0.0.1:8080/health
+          echo
+          curl -fsS http://127.0.0.1:8080/governance/status | tee status.json
+          python3 - <<'PY'
+          import json
+          status = json.load(open("status.json"))
+          print(json.dumps(status, indent=2)[:1500])
+          PY
+
+      - name: Model smoke test (synthetic phantom, only when weights are baked in)
+        if: env.PREFETCH == '1'
+        run: |
+          docker exec rt python /app/scripts/check_runtime.py --smoke --out /tmp/runtime_smoke.json
+          docker cp rt:/tmp/runtime_smoke.json runtime_smoke.json
+          docker cp rt:/opt/model-cache/model_manifest.json model_manifest.json
+
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs rt || true
+
+      - uses: actions/upload-artifact@v4
+        if: env.PREFETCH == '1'
+        with:
+          name: runtime-benchmark
+          path: |
+            runtime_smoke.json
+            model_manifest.json

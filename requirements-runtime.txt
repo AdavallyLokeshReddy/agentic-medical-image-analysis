@@ -1,0 +1,6 @@
+# Dependencies for the full runtime image (see Dockerfile). Superset of requirements.txt.
+-r requirements.txt
+
+# Imported by the external skp model code (backbone "maxvit_tiny_tf_512.in1k"); not in requirements.txt.
+# Any further packages skp needs are installed with skp itself.
+timm>=1.0

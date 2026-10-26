@@ -1,0 +1,25 @@
+.git
+.github
+frontend
+**/node_modules
+**/__pycache__
+**/*.pyc
+.pytest_cache
+venv
+.venv
+.env
+.env.*
+!.env.example
+# Data and weights never go into an image through COPY
+backend/uploads
+out_real
+**/*.dcm
+**/*.nii
+**/*.nii.gz
+**/*.pt
+**/*.pth
+**/*.onnx
+**/*.safetensors
+docs
+tests
+backend/tests
