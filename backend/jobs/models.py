@@ -74,6 +74,12 @@ class JobRecord:
     outcome: Optional[dict[str, Any]] = None
     artifacts: JobArtifacts = field(default_factory=JobArtifacts, repr=False)
 
+    @property
+    def accepted_status(self) -> str:
+        """Status at the moment the job was accepted (always 'queued'). The 202 response describes this,
+        not the live status: the worker thread may already be running by the time the response is built."""
+        return self.steps[0]["status"] if self.steps else JobStatus.QUEUED.value
+
     def transition(self, status: JobStatus, detail: Optional[str] = None) -> None:
         now = utc_now()
         if self.started_at is None and status != JobStatus.QUEUED:

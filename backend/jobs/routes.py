@@ -99,7 +99,8 @@ def build_job_router(service: AnalysisJobService, validate_case_id: Callable[[st
             "notice": NOTICE,
             "job_id": job.job_id,
             "case_id": job.case_id,
-            "status": job.status.value,
+            # Status at acceptance. The worker runs on its own thread and may already have advanced.
+            "status": job.accepted_status,
             "links": {"status": f"/jobs/{job.job_id}", "result": f"/jobs/{job.job_id}/result"},
         }
 

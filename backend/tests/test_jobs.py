@@ -193,6 +193,36 @@ class JobPipelineTests(unittest.TestCase):
         self.assertEqual(self.tool.calls, 0)
 
 
+class AsyncLifecycleTests(unittest.TestCase):
+    """submit() must return while the tool is still running; the lifecycle then advances on its own."""
+
+    def tearDown(self):
+        self.service.shutdown()
+
+    def test_submit_returns_before_the_tool_finishes_and_the_job_then_advances(self):
+        gate = threading.Event()
+        self.service, tool = make_service(tool=FakeIchTool(gate=gate))
+        job = self.service.submit("CASE-0001")
+        # The tool is blocked on the gate, so a synchronous implementation could never have returned.
+        self.assertEqual(job.accepted_status, "queued")
+        self.assertIn(job.status, {JobStatus.QUEUED, JobStatus.VALIDATING, JobStatus.PREPROCESSING, JobStatus.RUNNING})
+        wait_for(self.service, job, {JobStatus.RUNNING})
+        with self.assertRaises(JobRejected):
+            self.service.result(job.job_id)  # no result exists yet
+        gate.set()
+        wait_for(self.service, job, RESTING)
+        self.assertEqual(job.status, JobStatus.REQUIRES_REVIEW)
+        self.service.review(job.job_id, reviewer_id="reviewer-1", decision="accept")
+        self.assertEqual(job.status, JobStatus.COMPLETED)
+
+    def test_accepted_status_stays_queued_after_the_job_has_moved_on(self):
+        self.service, _ = make_service()
+        job = self.service.submit("CASE-0001")
+        wait_for(self.service, job, RESTING)
+        self.assertEqual(job.status, JobStatus.REQUIRES_REVIEW)
+        self.assertEqual(job.accepted_status, "queued")
+
+
 class SubmissionRuleTests(unittest.TestCase):
     def tearDown(self):
         getattr(self, "service", None) and self.service.shutdown()
@@ -364,6 +394,33 @@ class JobRouteTests(unittest.TestCase):
         review = self.client.post(f"/jobs/{body['job_id']}/review", json={"reviewer_id": "reviewer-1", "decision": "accept"})
         self.assertEqual(review.status_code, 200)
         self.assertEqual(self.client.get(f"/jobs/{body['job_id']}").json()["status"], "completed")
+
+    def test_post_returns_202_queued_while_the_tool_is_still_running(self):
+        gate = threading.Event()
+        service, _ = make_service(tool=FakeIchTool(gate=gate))
+        app = FastAPI()
+        app.include_router(build_job_router(service, _validate_case_id))
+        client = TestClient(app)
+        started = time.time()
+        created = client.post("/cases/CASE-0001/analysis")
+        self.assertEqual(created.status_code, 202)
+        self.assertEqual(created.json()["status"], "queued")
+        self.assertLess(time.time() - started, 5)  # returned although the tool is blocked
+        job_id = created.json()["job_id"]
+        deadline = time.time() + 10
+        while client.get(f"/jobs/{job_id}").json()["status"] != "running" and time.time() < deadline:
+            time.sleep(0.01)
+        self.assertEqual(client.get(f"/jobs/{job_id}").json()["status"], "running")
+        self.assertEqual(client.get(f"/jobs/{job_id}/result").status_code, 409)
+        gate.set()
+        deadline = time.time() + 10
+        while client.get(f"/jobs/{job_id}").json()["status"] != "requires_review" and time.time() < deadline:
+            time.sleep(0.01)
+        self.assertEqual(client.get(f"/jobs/{job_id}").json()["status"], "requires_review")
+        review = client.post(f"/jobs/{job_id}/review", json={"reviewer_id": "reviewer-1", "decision": "accept"})
+        self.assertEqual(review.status_code, 200)
+        self.assertEqual(client.get(f"/jobs/{job_id}").json()["status"], "completed")
+        service.shutdown()
 
     def test_empty_body_uses_defaults(self):
         self.assertEqual(self.client.post("/cases/CASE-0002/analysis").status_code, 202)
