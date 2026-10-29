@@ -75,3 +75,7 @@ temp/
 
 # Uploaded medical images / case files
 uploads/
+# Outputs derived from real imaging. Never commit.
+out_real/
+out_e2e/
+out_baseline/

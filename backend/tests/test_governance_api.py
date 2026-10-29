@@ -28,9 +28,16 @@ def test_registry_builds_without_constructing_any_tool():
     assert tool_registry is not registry
 
 
-def test_status_reports_no_http_model_execution(client):
+def test_status_reports_job_execution_honestly(client):
+    """Execution is exposed through the analysis-job routes; whether the model can run is reported separately."""
     body = client.get("/governance/status").json()
-    assert body["model_runtime"]["execution_exposed_over_http"] is False
+    assert body["model_runtime"]["execution_exposed_over_http"] is True
+    job = body["job_execution"]
+    assert isinstance(job["available"], bool)
+    # The flag must follow the real environment, never be hard-coded.
+    assert job["available"] == (
+        body["model_runtime"]["torch_installed"] and body["model_runtime"]["skp_installed"]
+    )
     assert "Not for clinical" in body["notice"]
     assert body["tool_registry"]["loaded"] is True
 

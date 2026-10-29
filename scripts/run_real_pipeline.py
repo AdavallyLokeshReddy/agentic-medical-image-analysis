@@ -224,7 +224,12 @@ def main():
                 f"{result.get('prediction', {}).get('any_probability')} (unvalidated, not a diagnosis)"
             ),
             confidence=result.get("prediction", {}).get("any_probability"),
-            supporting_slices=list(result.get("series", {}).get("supporting_slices") or []),
+            supporting_slices=sorted({
+                entry["slice_index"]
+                for entries in (result.get("series", {}).get("supporting_slices") or {}).values()
+                for entry in entries
+                if isinstance(entry, dict) and isinstance(entry.get("slice_index"), int)
+            }),
             provenance=EvidenceProvenance(tool_name="ich_detection", runtime="local research runtime"),
         )
         case.add_evidence(evidence)

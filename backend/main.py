@@ -404,6 +404,28 @@ def get_case_metadata(case_id: str):
 
 from governance_api import ApiContext, build_routers  # noqa: E402
 
+# ============================================================
+# ANALYSIS JOBS (governed, asynchronous model execution)
+#
+# See jobs/. POST /cases/{id}/analysis creates a job; the worker
+# runs the existing orchestrator -> tool -> verifier -> evidence ->
+# report -> human-review chain. Planning and execution stay
+# separate, and GET routes never start or advance a job.
+# JOBS_MAX_PENDING bounds the queue (default 3).
+# ============================================================
+
+from jobs.execution import LocalToolAdapter  # noqa: E402
+from jobs.routes import build_job_router, series_locator_from_context  # noqa: E402
+from jobs.service import AnalysisJobService  # noqa: E402
+
+job_service = AnalysisJobService(
+    adapter=LocalToolAdapter(),
+    series_locator=series_locator_from_context(
+        UPLOAD_DIR, validate_case_id, select_series, get_dicom_files
+    ),
+    max_pending=int(os.getenv("JOBS_MAX_PENDING", "3")),
+)
+
 for _router in build_routers(
     ApiContext(
         cases=cases,
@@ -411,9 +433,12 @@ for _router in build_routers(
         validate_case_id=validate_case_id,
         select_series=select_series,
         get_dicom_files=get_dicom_files,
+        job_status=job_service.runtime_status,
     )
 ):
     app.include_router(_router)
+
+app.include_router(build_job_router(job_service, validate_case_id))
 
 
 # ============================================================

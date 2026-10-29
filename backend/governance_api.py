@@ -48,11 +48,11 @@ LIBRARY_MODULES: list[dict[str, Any]] = [
     {"module": "agent.safety_contract", "label": "Safety contract", "http_exposed": "plan_only"},
     {"module": "agent.task_graph", "label": "Task graph", "http_exposed": "plan_only"},
     {"module": "tools.registry", "label": "Tool registry", "http_exposed": "yes"},
-    {"module": "verification.verifier", "label": "Evidence verification", "http_exposed": "no"},
-    {"module": "agent.human_review", "label": "Human review", "http_exposed": "no"},
-    {"module": "agent.review_lifecycle", "label": "Review lifecycle", "http_exposed": "no"},
+    {"module": "verification.verifier", "label": "Evidence verification", "http_exposed": "partial"},
+    {"module": "agent.human_review", "label": "Human review", "http_exposed": "partial"},
+    {"module": "agent.review_lifecycle", "label": "Review lifecycle", "http_exposed": "partial"},
     {"module": "agent.communication", "label": "Triage and communication", "http_exposed": "no"},
-    {"module": "reporting.structured_report", "label": "Structured report", "http_exposed": "no"},
+    {"module": "reporting.structured_report", "label": "Structured report", "http_exposed": "partial"},
     {"module": "database.audit", "label": "Audit service", "http_exposed": "if_database"},
 ]
 
@@ -66,6 +66,8 @@ class ApiContext:
     validate_case_id: Callable[[str], None]
     select_series: Callable[..., tuple[str, Path]]
     get_dicom_files: Callable[[Path], list[Path]]
+    # When the analysis-job routes are mounted, this reports their runtime readiness.
+    job_status: Optional[Callable[[], dict[str, Any]]] = None
 
 
 def _module_importable(name: str) -> bool:
@@ -347,9 +349,15 @@ def build_routers(ctx: ApiContext) -> list[APIRouter]:
                 "weights_source": "Hugging Face Hub, downloaded on first model use",
                 "torch_installed": _module_importable("torch"),
                 "monai_installed": _module_importable("monai"),
-                # Independent of installed dependencies: no route runs a model.
-                "execution_exposed_over_http": False,
+                # True when the analysis-job routes are mounted. Whether the model can actually run on
+                # this host is reported separately in "job_execution.available".
+                "execution_exposed_over_http": ctx.job_status is not None,
             },
+            "job_execution": (
+                ctx.job_status()
+                if ctx.job_status is not None
+                else {"available": False, "reason": "Analysis-job routes are not mounted."}
+            ),
             "persistence": _database_probe(),
             "library_modules": [
                 {**module, "importable": _module_importable(module["module"])}
