@@ -415,6 +415,7 @@ from governance_api import ApiContext, build_routers  # noqa: E402
 # ============================================================
 
 from jobs.execution import LocalToolAdapter  # noqa: E402
+from jobs.persistence import store_from_environment  # noqa: E402
 from jobs.routes import build_job_router, series_locator_from_context  # noqa: E402
 from jobs.service import AnalysisJobService  # noqa: E402
 
@@ -424,6 +425,7 @@ job_service = AnalysisJobService(
         UPLOAD_DIR, validate_case_id, select_series, get_dicom_files
     ),
     max_pending=int(os.getenv("JOBS_MAX_PENDING", "3")),
+    store=store_from_environment(),  # PostgreSQL when DATABASE_URL is set, else in memory
 )
 
 for _router in build_routers(

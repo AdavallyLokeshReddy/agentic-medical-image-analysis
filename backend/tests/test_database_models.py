@@ -5,6 +5,7 @@ from database.models import (
     CommunicationModel,
     EvidenceModel,
     HumanReviewModel,
+    JobModel,
     TriageModel,
     VerificationModel,
 )
@@ -19,6 +20,7 @@ def test_all_database_models_are_registered():
         "triage",
         "communications",
         "audit_events",
+        "jobs",
     }
 
     actual_tables = set(Base.metadata.tables.keys())
@@ -144,3 +146,18 @@ def test_primary_keys_are_defined():
     assert TriageModel.__table__.primary_key.columns.keys() == ["triage_id"]
     assert CommunicationModel.__table__.primary_key.columns.keys() == ["communication_id"]
     assert AuditEventModel.__table__.primary_key.columns.keys() == ["event_id"]
+
+def test_job_model_columns_and_primary_key():
+    columns = set(JobModel.__table__.columns.keys())
+
+    assert {
+        "job_id",
+        "case_id",
+        "status",
+        "steps",
+        "timings_seconds",
+        "error",
+        "outcome",
+        "result_json",
+    }.issubset(columns)
+    assert JobModel.__table__.primary_key.columns.keys() == ["job_id"]

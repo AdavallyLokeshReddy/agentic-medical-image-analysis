@@ -53,6 +53,9 @@ class JobArtifacts:
     review: Any = None          # agent.human_review.HumanReview
     lifecycle: Any = None       # agent.review_lifecycle.ReviewLifecycle
     lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+    #: Set once the worker has written the job's final state. A review waits for it, so a review's
+    #: write can never be overtaken (and overwritten) by the worker's final write.
+    persisted: threading.Event = field(default_factory=threading.Event, repr=False)
 
 
 @dataclass
@@ -73,6 +76,10 @@ class JobRecord:
     note: Optional[str] = None
     outcome: Optional[dict[str, Any]] = None
     artifacts: JobArtifacts = field(default_factory=JobArtifacts, repr=False)
+    #: True when this record was read back from the database rather than produced by this process.
+    #: Its stored status and result are readable, but the live governance objects (CaseState,
+    #: report, review lifecycle) do not exist, so a pending human review cannot be completed.
+    restored: bool = False
 
     @property
     def accepted_status(self) -> str:
@@ -89,6 +96,28 @@ class JobRecord:
         self.steps.append({"status": status.value, "at": now, "detail": detail})
         if status in FINAL or status == JobStatus.REQUIRES_REVIEW:
             self.finished_at = now
+
+    def to_row(self) -> dict[str, Any]:
+        """Column values for persistence. Plain JSON types only; contains no artifacts."""
+        return {
+            "job_id": self.job_id, "case_id": self.case_id, "body_region": self.body_region,
+            "clinical_question": self.clinical_question, "status": self.status.value,
+            "tool_name": self.tool_name, "created_at": self.created_at, "updated_at": self.updated_at,
+            "started_at": self.started_at, "finished_at": self.finished_at,
+            "steps": list(self.steps), "timings_seconds": dict(self.timings_seconds),
+            "error": self.error, "note": self.note, "outcome": self.outcome,
+        }
+
+    @classmethod
+    def from_row(cls, row: dict[str, Any]) -> "JobRecord":
+        return cls(
+            job_id=row["job_id"], case_id=row["case_id"], body_region=row["body_region"],
+            clinical_question=row["clinical_question"], status=JobStatus(row["status"]),
+            tool_name=row["tool_name"], created_at=row["created_at"], updated_at=row["updated_at"],
+            started_at=row["started_at"], finished_at=row["finished_at"],
+            steps=list(row["steps"] or []), timings_seconds=dict(row["timings_seconds"] or {}),
+            error=row["error"], note=row["note"], outcome=row["outcome"], restored=True,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Status view. Contains no model output, no probabilities and no report text."""
@@ -107,4 +136,5 @@ class JobRecord:
             "error": self.error,
             "note": self.note,
             "outcome": self.outcome,
+            "restored_after_restart": self.restored,
         }

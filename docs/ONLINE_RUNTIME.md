@@ -7,7 +7,7 @@ Research & Engineering Prototype - Not for clinical diagnosis or treatment.
 | Area | Status | Evidence |
 |---|---|---|
 | HTTP API: create case, DICOM upload, series validation, preview | IMPLEMENTED | `backend/main.py` (v0.5.0) |
-| Case storage | PARTIAL: folders under `backend/uploads/<case_id>` on local disk. Lost on restart/redeploy on every free host | `UPLOAD_DIR` in `main.py`; no database use in `main.py` |
+| Case storage | PARTIAL: DICOM folders under `backend/uploads/<case_id>` on local disk (lost on restart/redeploy on every free host). Job state is in PostgreSQL when `DATABASE_URL` is set | `UPLOAD_DIR` in `main.py`; `jobs/persistence.py` |
 | `/governance/status`, `/plan`, `/tools`, `/cases/{id}/audit` | IMPLEMENTED (planning and read-only). Plans never execute a tool | `backend/governance_api.py` |
 | Orchestrator, Safety Contract, Task Graph, verifier, evidence, review lifecycle, structured report, triage, communication | IMPLEMENTED as a library, covered by tests. **No HTTP route calls them** | grep: `verify_analysis`, `ReviewLifecycle`, `create_structured_draft_report` are not referenced by `main.py` or `governance_api.py` |
 | Model execution over HTTP (`tool.run`) | IMPLEMENTED in Phase 2 as an asynchronous job (see below); NOT yet run against the real model by the author | `backend/jobs/` |
@@ -87,7 +87,9 @@ Job statuses: `queued, validating, preprocessing, running, verifying, evidence_c
 
 ### What this layer deliberately does not do yet
 
-- **Job and case state live in process memory.** A restart loses them. PostgreSQL and object storage are Phases 3 and 4.
+- **Job state is durable only when `DATABASE_URL` is set (Phase 3).** With it, jobs, their steps and timings, the `/jobs/{id}/result` snapshot, the case / evidence / verification rows and *completed* human reviews are stored in PostgreSQL (`jobs` table plus the existing `backend/database/` tables). Without it, job state stays in process memory and a restart loses it, as before.
+- **What a restart does (with PostgreSQL):** finished jobs and jobs awaiting review stay readable. Jobs that were mid-run are marked `failed` ("RestartInterrupted"): their worker died and they cannot resume. A job that was `requires_review` before the restart stays readable, but its review **cannot be completed**: the live case state, report and review lifecycle are not stored (CaseState has no reconstruction yet). The API refuses with 409 and says to rerun the analysis. Pending reviews are never written to `human_reviews`; only completed ones are.
+- **Not durable yet:** uploaded DICOM files and the HTTP case registry (`main.cases`) stay on local disk / in memory. Object storage is a later phase. Run PostgreSQL locally with `docker compose up -d postgres` (see `docker-compose.yml`).
 - **The reviewer id is a self-asserted label.** There is no authentication.
 - **No per-job time limit is enforced** (the contract's resource policy is not yet applied to execution).
 - **One worker thread, one tool.** The model runs one case at a time. Only `ich_detection` is executable.

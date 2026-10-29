@@ -42,6 +42,7 @@ NEEDS_DB = {
     "test_case_persistence.py",
     "test_case_state_workflow_persistence.py",
     "test_repository.py",
+    "test_job_persistence.py",
 }
 
 WHOLE_BODY_WEIGHTS = (

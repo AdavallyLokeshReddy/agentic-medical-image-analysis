@@ -1,0 +1,30 @@
+# Local PostgreSQL 16 for development and the persistence tests. Nothing else.
+#
+#   docker compose up -d postgres
+#   set DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/agentic_medical_ai        (Windows CMD)
+#   export DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/agentic_medical_ai      (bash)
+#
+# For the test suite, use a database whose name ends in _test (the suite drops and recreates its tables):
+#   docker compose exec postgres createdb -U postgres agentic_medical_ai_test
+#   set DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/agentic_medical_ai_test
+#
+# Development-only credentials. Do not reuse them anywhere that is reachable from a network.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agentic_medical_ai
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

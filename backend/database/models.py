@@ -395,3 +395,39 @@ class AuditEventModel(Base):
         JSONB,
         nullable=True,
     )
+
+class JobModel(Base):
+    """
+    One governed analysis job (see backend/jobs).
+
+    The job's status view is stored column-by-column. Timestamps are kept as the same ISO-8601
+    strings the API returns so a restored job is byte-for-byte what was served before.
+
+    result_json is the snapshot behind GET /jobs/{id}/result (safety contract, task graph,
+    verification, evidence, report, review). It is written when the worker finishes and again when
+    a human review is recorded. It is NOT a clinical record and holds no image data.
+    """
+
+    __tablename__ = "jobs"
+
+    job_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+
+    # No foreign key to cases: the cases row is written by the worker, the job row at submission.
+    case_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+
+    body_region: Mapped[str] = mapped_column(String(64), nullable=False)
+    clinical_question: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    tool_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    created_at: Mapped[str] = mapped_column(String(40), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(40), nullable=False)
+    started_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    finished_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+    steps: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
+    timings_seconds: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    error: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    outcome: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    result_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)

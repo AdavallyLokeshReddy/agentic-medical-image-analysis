@@ -70,7 +70,7 @@ def metadata_provider(tool_name):
     )
 
 
-def make_service(tool=None, spacing=(1.0, 0.5, 0.5), modality="CT", loader_error=None, max_pending=3, required_modules=()):
+def make_service(tool=None, spacing=(1.0, 0.5, 0.5), modality="CT", loader_error=None, max_pending=3, required_modules=(), store=None):
     tool = tool or FakeIchTool()
     adapter = LocalToolAdapter(tool_factory=lambda: tool, metadata_provider=metadata_provider, required_modules=required_modules)
 
@@ -85,7 +85,7 @@ def make_service(tool=None, spacing=(1.0, 0.5, 0.5), modality="CT", loader_error
     def header(path):
         return {"modality": modality, "study_uid": "1.2.3", "series_uid": SERIES_UID}
 
-    service = AnalysisJobService(adapter, locator, series_loader=loader, header_reader=header, max_pending=max_pending)
+    service = AnalysisJobService(adapter, locator, series_loader=loader, header_reader=header, max_pending=max_pending, store=store)
     return service, tool
 
 

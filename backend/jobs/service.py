@@ -147,6 +147,24 @@ class JobStore:
         with self._lock:
             return sum(1 for j in self._jobs.values() if j.status in WORKING)
 
+    # ---- persistence hooks: no-ops here, implemented by jobs.persistence.PersistentJobStore ----
+    def save(self, job: JobRecord, snapshot: Any = None, *, write_snapshot: bool = False) -> None:
+        """Record the job's current state. `snapshot` is the /result payload (without the job view)."""
+
+    def snapshot(self, job_id: str) -> Optional[dict[str, Any]]:
+        """The stored /result snapshot for a restored job, if any."""
+        return None
+
+    def persist_case_state(self, case: Any, *, reviews: bool) -> None:
+        """Write the normalized case / evidence / verification rows (and completed reviews if asked)."""
+
+    def recover_interrupted(self) -> list[str]:
+        """Mark jobs left in a working state by a previous process as failed. Returns their ids."""
+        return []
+
+    def describe(self) -> dict[str, Any]:
+        return {"state_storage": "in-process memory (lost on restart)"}
+
 
 class AnalysisJobService:
     def __init__(
@@ -174,7 +192,7 @@ class AnalysisJobService:
         status = dict(self.adapter.runtime_status())
         status["jobs_working"] = self.store.count_working()
         status["max_pending"] = self.max_pending
-        status["state_storage"] = "in-process memory (lost on restart)"
+        status.update(self.store.describe())
         return status
 
     def submit(self, case_id: str, body_region: str = "head", clinical_question: Optional[str] = None) -> JobRecord:
@@ -186,6 +204,8 @@ class AnalysisJobService:
 
         with self._submit_lock:
             for other in self.store.for_case(case_id):
+                if other.restored:
+                    continue  # read back from the database: no live worker or review context exists for it
                 if other.status in WORKING or other.status == JobStatus.REQUIRES_REVIEW:
                     raise JobRejected(
                         "conflict",
@@ -224,6 +244,7 @@ class AnalysisJobService:
     @contextmanager
     def _stage(self, job: JobRecord, status: JobStatus, detail: Optional[str] = None) -> Iterator[None]:
         job.transition(status, detail)
+        self.store.save(job)
         started = time.perf_counter()
         try:
             yield
@@ -241,6 +262,19 @@ class AnalysisJobService:
         except Exception as error:  # noqa: BLE001 - recorded on the job, never swallowed silently
             log.exception("job %s failed in stage %s", job.job_id, job.status.value)
             self._fail(job, error)
+        finally:
+            self._persist_final(job)
+
+    def _persist_final(self, job: JobRecord) -> None:
+        """Write the finished job, its /result snapshot and the normalized governance rows."""
+        case = job.artifacts.case
+        try:
+            self.store.save(job, self._snapshot(job), write_snapshot=True)
+            if case is not None:
+                # Pending reviews are deliberately not written: human_reviews holds completed reviews only.
+                self.store.persist_case_state(case, reviews=False)
+        finally:
+            job.artifacts.persisted.set()
 
     def _end(self, job: JobRecord, status: JobStatus, note: str, case_status: CaseStatus) -> None:
         job.note = note
@@ -434,27 +468,30 @@ class AnalysisJobService:
     # ----------------------------------------------------------------------------------------
     # result and human review
     # ----------------------------------------------------------------------------------------
-    def result(self, job_id: str) -> dict[str, Any]:
-        job = self.get(job_id)
-        if job.status in WORKING:
-            raise JobRejected("conflict", f"Job {job_id} is still '{job.status.value}'.")
+    def _snapshot(self, job: JobRecord) -> dict[str, Any]:
+        """Everything GET /jobs/{id}/result shows besides the notice and the job status view."""
         art = job.artifacts
-        payload: dict[str, Any] = {"notice": NOTICE, "job": job.to_dict()}
-        if art.case is None:
-            return payload  # failed or abstained before a case existed
         case = art.case
-        payload.update(
+        if case is None:
+            return {}  # failed or abstained before a case existed
+        return to_jsonable(
             {
                 "case": case.summary(),
                 "safety_contract": case.safety_contract.to_dict() if case.safety_contract else None,
                 "task_graph": case.task_graph.to_dict(),
                 "verification": (art.verification_outcome or {}).get("verification_result"),
-                "evidence": to_jsonable(list(case.evidence)),
+                "evidence": list(case.evidence),
                 "report": art.report.to_dict() if art.report else None,
                 "human_review": art.review.to_dict() if art.review else None,
             }
         )
-        return to_jsonable(payload)
+
+    def result(self, job_id: str) -> dict[str, Any]:
+        job = self.get(job_id)
+        if job.status in WORKING:
+            raise JobRejected("conflict", f"Job {job_id} is still '{job.status.value}'.")
+        snapshot = (self.store.snapshot(job_id) or {}) if job.restored else self._snapshot(job)
+        return to_jsonable({"notice": NOTICE, "job": job.to_dict(), **snapshot})
 
     def review(
         self,
@@ -468,6 +505,16 @@ class AnalysisJobService:
     ) -> dict[str, Any]:
         job = self.get(job_id)
         art = job.artifacts
+        if job.restored and job.status == JobStatus.REQUIRES_REVIEW:
+            raise JobRejected(
+                "conflict",
+                f"Job {job_id} was awaiting human review when the backend restarted. Its live review context "
+                "(case state, report and review lifecycle) was interrupted and is not stored, so this review "
+                f"cannot be completed. The stored result stays readable. Rerun the analysis for case "
+                f"{job.case_id} (POST /cases/{job.case_id}/analysis) and review the new job.",
+            )
+        if job.status == JobStatus.REQUIRES_REVIEW and not art.persisted.wait(timeout=15):
+            raise JobRejected("conflict", f"Job {job_id} is still being finalized. Try again in a moment.")
         with art.lock:
             if job.status != JobStatus.REQUIRES_REVIEW or art.lifecycle is None:
                 raise JobRejected(
@@ -503,4 +550,6 @@ class AnalysisJobService:
             job.outcome = {**(job.outcome or {}), "human_review": f"completed: {decision}"}
             job.note = f"Human review recorded: {decision} by {reviewer_id}."
             job.transition(JobStatus.COMPLETED, job.note)
+            self.store.save(job, self._snapshot(job), write_snapshot=True)
+            self.store.persist_case_state(case, reviews=True)  # the review is completed: safe to write
             return to_jsonable(art.review.to_dict())
