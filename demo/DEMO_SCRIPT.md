@@ -2,6 +2,10 @@
 
 Research & Engineering Prototype - Not for clinical diagnosis or treatment.
 
+## Timing facts (measured on the team laptop)
+- First job after the backend starts: the `running` stage took 185 s (includes loading the model). Warm time: measure tonight and write it here: ____ s.
+- While the real model runs on CPU, keep talking: explain what governance did BEFORE the model (case state, safety contract, task graph, tool authorization).
+
 ## T-30 min (before anyone arrives)
 1. `git pull` in the repo, then double-click `demo\0_preflight.bat`. Everything says PASS.
 2. Double-click `demo\2_start_backend.bat`. Leave that window open. Do NOT restart it.
@@ -14,7 +18,7 @@ Research & Engineering Prototype - Not for clinical diagnosis or treatment.
 |---|---|---|
 | 0:00-1:30 | Slide: problem and contribution | "We did not build a new model. We built the governance layer that controls how medical-imaging AI tools are selected, run, verified and reviewed." |
 | 1:30-3:00 | Slide: architecture, Safety Contract | "The system can plan and verify. It cannot diagnose, prescribe, or take irreversible actions. A human always decides." |
-| 3:00-7:00 | **`demo\3_job_demo.bat`** (MAIN DEMO) | Narrate while it runs: case created -> plan and Safety Contract -> only the approved tool is selected -> real model runs -> verifier checks -> evidence with provenance -> report is a draft -> I act as the reviewer and accept. |
+| 3:00-7:00 | **`demo\3_job_demo.bat`** (MAIN DEMO) | Narrate while it runs: case created -> plan and Safety Contract -> only the approved tool is selected -> real model runs -> verifier checks -> evidence with provenance -> report is a draft -> I act as the reviewer and reject it with a reason (5 mm slices). |
 | 7:00-8:30 | Point at the result | "Probability is one model output, not accuracy. Slices are 5 mm, the verifier warned, so it was escalated to a human. That is the system distrusting the result on purpose." |
 | 8:30-9:15 | Hosted site (browser tab already open) | "The shell is online. The model runs locally today. Moving the whole system online is the next phase." |
 | 9:15-10:00 | Slide: status and next steps | Done / in development / planned. |

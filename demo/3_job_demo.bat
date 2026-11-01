@@ -7,7 +7,7 @@ set HERE=%~dp0
 cd /d "%~dp0.."
 title JOB DEMO
 cls
-python scripts\run_job_e2e.py "%DICOM_DIR%" --base-url %API% --review accept --reviewer reviewer-1 --out out_e2e
+python scripts\run_job_e2e.py "%DICOM_DIR%" --base-url %API% %REVIEW_ARGS% --out out_e2e
 if errorlevel 1 (
   echo.
   echo ================================================================
