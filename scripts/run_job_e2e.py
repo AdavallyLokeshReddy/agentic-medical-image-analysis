@@ -51,7 +51,7 @@ def multipart(files):
     parts = []
     for path in files:
         parts.append(
-            (f"--{boundary}\r\nContent-Disposition: form-data; name=\"files\"; filename=\"{path.name}\"\r\n"
+            (f"--{boundary}\r\nContent-Disposition: form-data; name=\"files\"; filename=\"{path.name if path.suffix.lower() == '.dcm' else path.name + '.dcm'}\"\r\n"
              "Content-Type: application/dicom\r\n\r\n").encode() + path.read_bytes() + b"\r\n"
         )
     parts.append(f"--{boundary}--\r\n".encode())
@@ -77,7 +77,9 @@ def main():
     base = args.base_url.rstrip("/")
 
     folder = Path(args.dicom_dir)
-    files = sorted(p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() == ".dcm") if folder.is_dir() else []
+    candidates = sorted(p for p in folder.rglob("*") if p.is_file() and not p.name.startswith(".")) if folder.is_dir() else []
+    # Prefer files named .dcm; some datasets ship DICOM without an extension (same rule as run_real_pipeline.py).
+    files = [p for p in candidates if p.suffix.lower() == ".dcm"] or candidates
     if not files:
         sys.exit(f"No .dcm files found in: {folder}")
 

@@ -10,7 +10,7 @@ python -c "import fastapi, uvicorn, pydicom, numpy, torch, skp; print('    PASS 
 echo.
 echo [2] DICOM folder
 if exist "%DICOM_DIR%" (
-  for /f %%c in ('dir /b /s "%DICOM_DIR%\*.dcm" ^| find /c /v ""') do echo     PASS  %%c .dcm files in %DICOM_DIR%
+  python -c "import os; from pathlib import Path; a=[f for f in Path(os.environ['DICOM_DIR']).rglob('*') if f.is_file()]; d=[f for f in a if f.suffix.lower()=='.dcm']; print('    PASS ', len(d), '.dcm files,', len(a), 'files in total')"
 ) else (
   echo     FAIL: folder not found: %DICOM_DIR%
 )
